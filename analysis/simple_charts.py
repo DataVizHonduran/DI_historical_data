@@ -5,8 +5,7 @@ Really simple: Generate charts for all futures
 
 from futures_data_analyzer import FuturesDataAnalyzer
 
-# Update this path
-DB_PATH = "b3_futures.db" 
+DB_PATH = str(Path(__file__).resolve().parents[1] / "b3_futures.db")
 
 # Create analyzer and connect
 analyzer = FuturesDataAnalyzer(DB_PATH)
