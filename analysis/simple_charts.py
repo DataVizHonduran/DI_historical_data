@@ -6,14 +6,14 @@ Really simple: Generate charts for all futures
 from futures_data_analyzer import FuturesDataAnalyzer
 
 # Update this path
-DB_PATH = "DI_historical_data.db" 
+DB_PATH = "b3_futures.db" 
 
 # Create analyzer and connect
 analyzer = FuturesDataAnalyzer(DB_PATH)
 analyzer.connect_database()
 
 # Get all futures
-futures_df = analyzer.query_data("SELECT DISTINCT Commodity FROM all_futures")
+futures_df = analyzer.query_data("SELECT DISTINCT name FROM all_futures")
 futures_list = futures_df['Commodity'].tolist()
 
 print(f"Creating charts for {len(futures_list)} futures...")
