@@ -23,7 +23,7 @@ for commodity in futures_list:
     if not data.empty:
         chart = analyzer.create_price_trend_chart(data, commodity)
         safe_name = commodity.replace(" ", "_").replace("/", "_")[:30]
-        analyzer.save_chart(chart, f"{safe_name}.html")
+        analyzer.save_chart(chart, f"charts/{safe_name}.html")
         print(f"✅ {commodity}")
 
 analyzer.disconnect_database()
