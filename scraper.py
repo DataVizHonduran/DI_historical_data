@@ -51,10 +51,9 @@ def save_to_sqlite(df, db_path='b3_futures.db'):
     conn = sqlite3.connect(db_path)
     
     cursor = conn.cursor()
-    cursor.execute("DROP TABLE IF EXISTS all_futures")
     conn.commit()
     
-    df.to_sql('all_futures', conn, if_exists='replace', index=False)
+    df.to_sql('all_futures', conn, if_exists='append', index=False)
     
     conn.commit()
     conn.close()
