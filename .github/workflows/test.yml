@@ -1,0 +1,60 @@
+name: Diagnostics Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test_commit:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Check directory structure
+        run: |
+          echo "Current directory: $(pwd)"
+          echo "Repository contents:"
+          ls -la
+          
+      - name: Test file creation and commit
+        run: |
+          # Create a test file in charts directory
+          mkdir -p charts
+          echo "Test file created at $(date)" > charts/test.txt
+          
+          # Check if file was created
+          echo "Contents of charts directory:"
+          ls -la charts/
+          
+          # Configure git
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
+          # Show git status
+          echo "Git status:"
+          git status
+          
+          # Add the file
+          git add charts/test.txt
+          
+          # Check if file was staged
+          echo "Git status after adding:"
+          git status
+          
+          # Commit the change
+          git commit -m "Add test file"
+          
+          # Check permissions of .git directory
+          echo "Git directory permissions:"
+          ls -la .git
+          
+          # Try to push using GITHUB_TOKEN
+          git push
+          
+      - name: Alternative push method
+        if: failure()
+        run: |
+          # Try an alternative push method using token directly
+          echo "Using alternative push method..."
+          git push https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:${{ github.ref }}
