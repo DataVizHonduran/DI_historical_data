@@ -28,6 +28,11 @@ di1_data = pd.read_sql("""
 # Convert download_date to datetime
 di1_data['download_date'] = pd.to_datetime(di1_data['download_date'])
 
+# Convert price columns to numeric
+di1_data['Current_Price'] = pd.to_numeric(di1_data['Current_Price'], errors='coerce')
+di1_data['Previous_Price'] = pd.to_numeric(di1_data['Previous_Price'], errors='coerce')
+di1_data['Variation'] = pd.to_numeric(di1_data['Variation'], errors='coerce')
+
 # Create a unique identifier for each contract
 di1_data['contract_id'] = di1_data['Commodity'] + ' ' + di1_data['Contract_Month']
 
@@ -37,55 +42,69 @@ print(f"Found {len(unique_contracts)} unique DI1 contracts")
 
 # Create separate chart for each contract
 for i, contract_id in enumerate(unique_contracts):
-    # Filter data for this contract
-    contract_data = di1_data[di1_data['contract_id'] == contract_id].sort_values('download_date')
-    
-    if len(contract_data) < 2:
-        print(f"Skipping {contract_id}: Not enough data points")
-        continue
-    
-    # Extract contract details
-    commodity = contract_data['Commodity'].iloc[0]
-    contract_month = contract_data['Contract_Month'].iloc[0]
-    
-    # Create chart
-    plt.figure(figsize=(10, 6))
-    
-    # Plot price
-    plt.plot(contract_data['download_date'], contract_data['Current_Price'], 
-             marker='o', linewidth=2, label='Price')
-    
-    # Format the chart
-    plt.title(f'{commodity} - {contract_month} Contract')
-    plt.xlabel('Date')
-    plt.ylabel('Price')
-    plt.grid(True, linestyle='--', alpha=0.7)
-    plt.xticks(rotation=45)
-    
-    # Add some stats to the chart
-    latest_price = contract_data['Current_Price'].iloc[-1]
-    first_price = contract_data['Current_Price'].iloc[0]
-    change = latest_price - first_price
-    pct_change = (change / first_price) * 100 if first_price != 0 else 0
-    
-    stats_text = (
-        f"Latest: {latest_price:.2f}\n"
-        f"Change: {change:.2f} ({pct_change:.2f}%)"
-    )
-    
-    # Add stats text to the chart
-    plt.annotate(stats_text, xy=(0.02, 0.95), xycoords='axes fraction',
-                 bbox=dict(boxstyle='round,pad=0.5', fc='lightyellow', alpha=0.7))
-    
-    plt.tight_layout()
-    
-    # Save chart
-    safe_name = contract_id.replace('/', '_').replace(' ', '_')[:40]
-    file_path = f'charts/{safe_name}_chart.png'
-    plt.savefig(file_path, dpi=150, bbox_inches='tight')
-    plt.close()
-    
-    print(f"✓ {i+1}/{len(unique_contracts)}: {contract_id}")
+    try:
+        # Filter data for this contract
+        contract_data = di1_data[di1_data['contract_id'] == contract_id].sort_values('download_date')
+        
+        if len(contract_data) < 2:
+            print(f"Skipping {contract_id}: Not enough data points")
+            continue
+        
+        # Drop any rows with NaN in Current_Price
+        contract_data = contract_data.dropna(subset=['Current_Price'])
+        
+        if len(contract_data) < 2:
+            print(f"Skipping {contract_id}: Not enough valid data points after dropping NaN values")
+            continue
+            
+        # Extract contract details
+        commodity = contract_data['Commodity'].iloc[0]
+        contract_month = contract_data['Contract_Month'].iloc[0]
+        
+        # Create chart
+        plt.figure(figsize=(10, 6))
+        
+        # Plot price
+        plt.plot(contract_data['download_date'], contract_data['Current_Price'], 
+                marker='o', linewidth=2, label='Price')
+        
+        # Format the chart
+        plt.title(f'{commodity} - {contract_month} Contract')
+        plt.xlabel('Date')
+        plt.ylabel('Price')
+        plt.grid(True, linestyle='--', alpha=0.7)
+        plt.xticks(rotation=45)
+        
+        # Add some stats to the chart if we have numeric data
+        try:
+            latest_price = float(contract_data['Current_Price'].iloc[-1])
+            first_price = float(contract_data['Current_Price'].iloc[0])
+            change = latest_price - first_price
+            pct_change = (change / first_price) * 100 if first_price != 0 else 0
+            
+            stats_text = (
+                f"Latest: {latest_price:.2f}\n"
+                f"Change: {change:.2f} ({pct_change:.2f}%)"
+            )
+            
+            # Add stats text to the chart
+            plt.annotate(stats_text, xy=(0.02, 0.95), xycoords='axes fraction',
+                        bbox=dict(boxstyle='round,pad=0.5', fc='lightyellow', alpha=0.7))
+        except (ValueError, TypeError) as e:
+            print(f"Warning: Could not calculate stats for {contract_id}: {e}")
+        
+        plt.tight_layout()
+        
+        # Save chart
+        safe_name = contract_id.replace('/', '_').replace(' ', '_')[:40]
+        file_path = f'charts/{safe_name}_chart.png'
+        plt.savefig(file_path, dpi=150, bbox_inches='tight')
+        plt.close()
+        
+        print(f"✓ {i+1}/{len(unique_contracts)}: {contract_id}")
+    except Exception as e:
+        print(f"Error creating chart for {contract_id}: {e}")
+        plt.close()  # Make sure to close the figure if there's an error
 
 # Create an index.html file
 print("Creating index.html...")
@@ -131,8 +150,12 @@ html_content += """
 """
 
 # Save the HTML file
-with open('charts/index.html', 'w') as f:
-    f.write(html_content)
+try:
+    with open('charts/index.html', 'w') as f:
+        f.write(html_content)
+    print("Created index.html successfully")
+except Exception as e:
+    print(f"Error creating index.html: {e}")
 
 # Close connection
 conn.close()
