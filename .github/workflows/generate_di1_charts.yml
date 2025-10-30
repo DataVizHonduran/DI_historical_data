@@ -1,22 +1,15 @@
-name: Generate and Commit DI1 Charts
+name: Run simple_charts.py and Commit
 
 on:
-  # Run daily at 00:30 UTC
-  schedule:
-    - cron: '30 0 * * *'
-  
-  # Allow manual triggering
   workflow_dispatch:
 
 jobs:
-  generate_charts:
+  run_and_commit:
     runs-on: ubuntu-latest
     
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-        with:
-          fetch-depth: 0  # Get full history
       
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -28,14 +21,48 @@ jobs:
           python -m pip install --upgrade pip
           pip install pandas matplotlib numpy
       
-      - name: Generate DI1 Charts
+      - name: Run simple_charts.py and debug
         run: |
-          # Run the chart generation script
-          python simple_charts.py
+          # Make sure charts directory exists
+          mkdir -p charts
           
-          # Print directory contents for debugging
+          # Show current directory and files
+          echo "Current directory: $(pwd)"
+          echo "Files in directory:"
+          ls -la
+          
+          # Check if script exists
+          if [ -f "simple_charts.py" ]; then
+            echo "simple_charts.py found"
+          else
+            echo "ERROR: simple_charts.py not found!"
+            exit 1
+          fi
+          
+          # Run the script with extra output
+          echo "Running simple_charts.py..."
+          python -u simple_charts.py
+          
+          # Check if charts were created
           echo "Contents of charts directory:"
           ls -la charts/
+          
+          # Count the number of PNG files
+          PNG_COUNT=$(ls -1 charts/*.png 2>/dev/null | wc -l)
+          echo "Number of PNG files: $PNG_COUNT"
+          
+          # If no charts were created, create a test chart
+          if [ "$PNG_COUNT" -eq 0 ]; then
+            echo "No charts were created, creating a test chart..."
+            python -c "
+import matplotlib.pyplot as plt
+import os
+plt.figure()
+plt.plot([1, 2, 3, 4], [1, 4, 9, 16])
+plt.title('Test Chart')
+plt.savefig('charts/test_chart.png')
+"
+          fi
       
       - name: Commit and push changes
         run: |
@@ -43,19 +70,17 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           
-          # Print git status before adding
-          echo "Git status before adding changes:"
-          git status
-          
-          # Add charts directory
+          # Add all files in charts directory
           git add charts/
           
-          # Print git status after adding
-          echo "Git status after adding changes:"
+          # Check what's staged
+          echo "Git status after adding:"
           git status
           
-          # Create commit
-          git commit -m "Update DI1 charts - $(date +'%Y-%m-%d')"
+          # Commit
+          git commit -m "Update charts - $(date +'%Y-%m-%d')"
           
-          # Push changes
+          # Push
           git push
+          
+          echo "Changes pushed to repository"
