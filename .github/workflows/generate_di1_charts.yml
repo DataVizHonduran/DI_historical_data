@@ -28,10 +28,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install pandas matplotlib numpy
       
-      - name: Generate DI1 Charts
+      - name: Generate Charts
         run: |
-          # Run the chart generation script
-          python di1_charts.py
+          # Make sure charts directory exists
+          mkdir -p charts
+          
+          # Run the existing chart generation script
+          python simple_charts.py
+          
+          # Move any chart files to charts directory if they're not already there
+          mv *_chart.png charts/ 2>/dev/null || true
       
       - name: Commit and push changes
         run: |
@@ -46,7 +52,7 @@ jobs:
           if git diff --staged --quiet; then
             echo "No changes to charts, skipping commit"
           else
-            git commit -m "Update DI1 charts - $(date +'%Y-%m-%d')"
+            git commit -m "Update futures charts - $(date +'%Y-%m-%d')"
             
             # Push changes
             git push
