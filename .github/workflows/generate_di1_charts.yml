@@ -1,7 +1,7 @@
-name: Generate DI1 Charts Daily
+name: Generate and Commit DI1 Charts
 
 on:
-  # Run daily at 00:30 UTC (after the data scraping workflow)
+  # Run daily at 00:30 UTC
   schedule:
     - cron: '30 0 * * *'
   
@@ -16,7 +16,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0  # Get all history to ensure we have the latest data
+          fetch-depth: 0  # Get full history
       
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -28,16 +28,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install pandas matplotlib numpy
       
-      - name: Generate Charts
+      - name: Generate DI1 Charts
         run: |
-          # Make sure charts directory exists
-          mkdir -p charts
-          
-          # Run the existing chart generation script
+          # Run the chart generation script
           python simple_charts.py
           
-          # Move any chart files to charts directory if they're not already there
-          mv *_chart.png charts/ 2>/dev/null || true
+          # Print directory contents for debugging
+          echo "Contents of charts directory:"
+          ls -la charts/
       
       - name: Commit and push changes
         run: |
@@ -45,15 +43,19 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           
-          # Stage changes
+          # Print git status before adding
+          echo "Git status before adding changes:"
+          git status
+          
+          # Add charts directory
           git add charts/
           
-          # Commit only if there are changes
-          if git diff --staged --quiet; then
-            echo "No changes to charts, skipping commit"
-          else
-            git commit -m "Update futures charts - $(date +'%Y-%m-%d')"
-            
-            # Push changes
-            git push
-          fi
+          # Print git status after adding
+          echo "Git status after adding changes:"
+          git status
+          
+          # Create commit
+          git commit -m "Update DI1 charts - $(date +'%Y-%m-%d')"
+          
+          # Push changes
+          git push
